@@ -10,7 +10,7 @@
         //$rootScope.travelStyles;
         //$rootScope.topStates;
         //$rootScope.activities;
-        
+
         $scope.topTags = [
         { tag: 'rafting', image_url: '/img/tags/rafting.png' },
         { tag: 'skiing', image_url: '/img/tags/skiing.png' },
@@ -60,20 +60,18 @@
                     if (!user.existed()) {
                         accountService.getMyProfile().then(function (response) {
                             accountService.updateUserFacebookProfile(response, user.id, function (data) {
-                                $scope.$apply(function () {
-                                    if (data) {
-                                        var x = data;
-                                        $scope.userObj = JSON.parse(JSON.stringify(Parse.User.current()));
-                                    }
-                                });
+                                if (data) {
+                                    var x = data;
+                                    $scope.userObj = JSON.parse(JSON.stringify(Parse.User.current()));
+                                }
                             });
                         });
                     }
                     else {
                         $scope.userObj = JSON.parse(JSON.stringify(Parse.User.current()));
-                        $scope.$apply();
                     }
-                    $location.path("/account/postTrip/");
+                    //$location.path("account/postTrip/");
+                    $scope.$apply();
                 },
                 error: function (user, error) {
                     console.log("Cancelled");
@@ -92,8 +90,10 @@
                 if (!transString) {
                     transString = 'upload/c_fill,h_440,w_440/';
                 }
-                var arr = url.split('upload/');
-                var croppedUrl = arr[0] + transString + arr[1];
+                if (url) {
+                    var arr = url.split('upload/');
+                    var croppedUrl = arr[0] + transString + arr[1];
+                }
             } catch (e) {
                 console.log(e);
             }
@@ -104,7 +104,14 @@
             $location.path("/feed//" + $scope.query[$scope.queryBy]);
         }
 
-
+        $scope.redirectToPost = function () {
+            $location.path("account/postTrip");
+            $scope.$apply();
+        }
+        $scope.redirectToExplore = function () {
+            $location.path("/explore/");
+            $scope.$apply();
+        }
         //Main app
         //tourService.getTravelStyles(function (data) {
         //    $scope.$apply(function () {

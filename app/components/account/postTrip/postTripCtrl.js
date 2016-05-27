@@ -2,8 +2,8 @@
     'use strict';
 
     var app = angular.module('campture');
-    app.controller('PostTripCtrl', ['$scope', '$cookies', '$rootScope', '$location', 'AccountService', controller]);
-    function controller($scope, $cookies, $rootScope, $location, accountService) {
+    app.controller('PostTripCtrl', ['$scope', '$route', '$cookies', '$rootScope', '$location', '$sessionStorage', '$interval', 'AccountService', controller]);
+    function controller($scope, $route, $cookies, $rootScope, $location, $sessionStorage, $interval, accountService) {
         //====== Scope Variables==========
         //================================
         $(document).ready(function () {
@@ -12,6 +12,7 @@
         $scope.userObj = JSON.parse(JSON.stringify(Parse.User.current()));
         if (!$scope.userObj) {
             $location.path("/");
+            return;
         }
         $scope.userObj.id = $scope.userObj.objectId;
         $scope.details = function (details) {
@@ -38,10 +39,38 @@
         $scope.isTripUploading = false;
         $scope.currentPlaceIndex = 0;
         $scope.currentImageIndex = 0;
+        $scope.openStatus = true;
         //Date functions
         $scope.status = {
             opened: false
         };
+
+        //form session save
+        $scope.form = {
+            postTripForm: {},
+            data: {}
+        };
+        $scope.saveForm = function () {
+            console.log('data:', $scope.form.data);
+        };
+
+        getFormSession();
+        $scope.saveFormSession = function () {
+            $sessionStorage.newTripSession = $scope.newTrip;
+            $sessionStorage.placesSession = $scope.places;
+        }
+        $scope.deleteFormSession = function () {
+            $scope.newTrip = new Object();
+            $scope.newTrip.tags = new Array();
+            $scope.places = new Array();
+            $scope.newplaces = [0];
+            $scope.places[$scope.newplaces.length - 1] = { images: new Array() };
+            $sessionStorage.newTripSession = $scope.newTrip;
+            $sessionStorage.placesSession = $scope.places;
+            $('#resetTripModal').modal('hide');
+            $('.modal-backdrop').hide();
+            $route.reload();
+        }
         $scope.open = function ($event) {
             $scope.status.opened = true;
         };
@@ -64,7 +93,9 @@
         $scope.removePlace = function () {
             $scope.newplaces.pop();
         };
-
+        $scope.deleteImage = function (placindex, imageindex) {
+            $scope.places[placindex].images.splice(imageindex, 1);
+        }
         $scope.postTrip = function () {
             $scope.isPublishedClicked = true;
             if ($scope.postTripForm.$invalid) {
@@ -86,6 +117,7 @@
                                 $scope.newplaces = [1];
                                 $scope.newTrip = undefined;
                                 $scope.places = undefined;
+                                $scope.deleteFormSession();
                                 $scope.isTripUploading = false;
                                 $location.path('/account/timeline/' + data);
                             }
@@ -97,16 +129,16 @@
         $scope.dropzoneConfig = {
             'options': { // passed into the Dropzone constructor
                 'acceptedFiles': '.jpg,.png,.jpeg,.gif',
-                'url': 'https://api.cloudinary.com/v1_1/dzseog4g3/image/upload',
+                'url': 'https://api.cloudinary.com/v1_1/dsykpguat/image/upload', //dzseog4g3
                 'uploadMultiple': false,
                 'parallelUploads': 10,
                 'addRemoveLinks': true
             },
             'eventHandlers': {
                 'sending': function (file, xhr, formData) {
-                    formData.append('api_key', '374998139757779');
+                    formData.append('api_key', '383751488485679'); //374998139757779
                     formData.append('timestamp', Date.now() / 1000 | 0);
-                    formData.append('upload_preset', 'campture');
+                    formData.append('upload_preset', 'campture2');
                     file.placeIndex = $scope.currentPlaceIndex;
                     file.imageIndex = $scope.currentImageIndex;
                     if (file.imageIndex == 0) {
@@ -127,8 +159,15 @@
                     }
                     $scope.currentImageIndex++;
                 },
+                'error': function (file, response) {
+                    $scope.places[file.placeIndex].images.push({ image_url: response.url });
+                    $scope.saveFormSession();
+                    $scope.$apply();
+                },
                 'success': function (file, response) {
                     $scope.places[file.placeIndex].images.push({ image_url: response.url });
+                    $scope.saveFormSession();
+                    $scope.$apply();
                 },
                 'removedfile': function (file, response) {
                     $scope.places[file.placeIndex].images.splice(file.imageIndex, 1);
@@ -151,7 +190,7 @@
         $scope.mainImageDropzoneConfig = {
             'options': { // passed into the Dropzone constructor
                 'acceptedFiles': '.jpg,.png,.jpeg,.gif',
-                'url': 'https://api.cloudinary.com/v1_1/dzseog4g3/image/upload',
+                'url': 'https://api.cloudinary.com/v1_1/dsykpguat/image/upload', //dzseog4g3
                 'uploadMultiple': false,
                 'parallelUploads': 1,
                 'maxFiles': 1
@@ -160,15 +199,16 @@
                 'sending': function (file, xhr, formData) {
                     $scope.mainImageUploading = true;
                     $scope.$apply();
-                    formData.append('api_key', '374998139757779');
+                    formData.append('api_key', '383751488485679'); //374998139757779
                     formData.append('timestamp', Date.now() / 1000 | 0);
-                    formData.append('upload_preset', 'campture');
+                    formData.append('upload_preset', 'campture2');
 
                 },
                 'success': function (file, response) {
                     $scope.newTrip.main_image = { image_url: response.url };
                     $scope.mainImageUploading = false;
                     $scope.mainImageUploaded = true;
+                    $scope.saveFormSession();
                     $scope.$apply();
                 }
             }
@@ -178,10 +218,10 @@
             $scope.currentImageIndex = 0;
         };
         $scope.setUploadPlaceIndexForHover = function (pIndex) {
-            if($scope.currentPlaceIndex != pIndex){
+            if ($scope.currentPlaceIndex != pIndex) {
                 $scope.currentImageIndex = 0;
             }
-            $scope.currentPlaceIndex = pIndex;            
+            $scope.currentPlaceIndex = pIndex;
         };
         $scope.closeAlert = function (index) {
             $scope.alerts.splice(index, 1);
@@ -220,7 +260,20 @@
         $scope.focusTagsInput = function () {
             $('#tagInput').focus();
         }
+        $scope.myFunct = function (keyEvent) {
+            if (keyEvent.which === 13)
+                $scope.formatTags();
+        }
 
+        $scope.removeCoverImage = function () {
+            $scope.mainImageUploaded = false;
+            $scope.mainImageUploading = false;
+            if ($scope.newTrip.main_image) {
+                $scope.newTrip.main_image = undefined;
+            }
+            $scope.saveFormSession();
+            $route.reload();
+        }
         //GeoTagging
         function getGPSDegreeToDecimal(degree, minutes, seconds, direction) {
             direction.toUpperCase();
@@ -281,6 +334,47 @@
             }
             $scope.imageUploadDone = true;
             return true;
+        }
+        function getFormSession() {
+            if ($sessionStorage.newTripSession) {
+                $scope.newTrip = $sessionStorage.newTripSession;
+                if ($scope.newTrip.posted_on) {
+                    $scope.newTrip.posted_on = new Date($scope.newTrip.posted_on);
+                }
+                if ($scope.newTrip.createdAt) {
+                    $scope.newTrip.createdAt = new Date($scope.newTrip.createdAt);
+                }
+                if ($scope.newTrip.updatedAt) {
+                    $scope.newTrip.updatedAt = new Date($scope.newTrip.updatedAt);
+                }
+                if ($scope.newTrip.visited_places) {
+                    for (var i = 0; i < $scope.newTrip.visited_places.length; i++) {
+                        if ($scope.newTrip.visited_places[i].date) {
+                            $scope.newTrip.visited_places[i].date = new Date($scope.newTrip.visited_places[i].date);
+                        }
+                    }
+                }
+                if ($scope.newTrip.main_image && $scope.newTrip.main_image.image_url) {
+                    $scope.mainImageUploaded = true;
+                }
+            }
+            if ($sessionStorage.placesSession) {
+                if ($sessionStorage.placesSession.length > 1) {
+                    $scope.openStatus = false;
+                }
+                $scope.places = $sessionStorage.placesSession;
+                if ($scope.places) {
+                    for (var i = 0; i < $scope.places.length; i++) {
+                        if ($scope.places[i].date) {
+                            $scope.places[i].date = new Date($scope.places[i].date);
+                        }
+                    }
+                }
+                $scope.newplaces = new Array();
+                for (var i = 0; i < $scope.places.length; i++) {
+                    $scope.newplaces.push(i);
+                }
+            }
         }
     };
 })();

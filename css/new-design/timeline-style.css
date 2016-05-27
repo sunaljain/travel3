@@ -202,7 +202,7 @@ html, body, .wrap {
           float: left;
           width: 30%; } }
       .content .portfolio-item .portfolio-info .date {
-        font-size: 110%;
+        font-size: 17px;
         color: black;
         margin-bottom: 10px; }
       .content .portfolio-item .portfolio-info .meta {
@@ -222,8 +222,8 @@ html, body, .wrap {
           width: 70%; } }
       .content .portfolio-item .portfolio-image img {
         width: 100%;
-        max-height: 100%;
-        height: auto; }
+    max-height: 450px;
+    height: 90vw;}
       .content .portfolio-item .portfolio-image div.loading img {
         width: auto;
         height: auto; }

@@ -78,6 +78,25 @@
             controller: 'ExploreCtrl',
             templateUrl:'app/components/termsOfUse/termsOfUse.html'
         })
+        .when('/explorerProgram/',{
+            templateUrl:'app/components/explorerProgram/explorerProgram.html'
+        })
+        .when('/gearChecklist/',{
+            controller: 'GearChecklistCtrl',
+            templateUrl:'app/components/gearChecklist/gearChecklist.html'
+        })
+        .when('/location/:placeId',{
+            controller: 'LocationCtrl',
+            templateUrl:'app/components/location/location.html'
+        })
+        .when('/inspiration/',{
+            controller: 'InspirationCtrl',
+            templateUrl:'app/components/inspiration/inspiration.html'
+        })
+        .when('/inspirationAdmin/',{
+            controller: 'InspirationAdminCtrl',
+            templateUrl:'app/components/inspirationAdmin/inspirationAdmin.html'
+        })
         .when('/pageNotFound/',{
             controller: 'ErrorPageCtrl',
             templateUrl:'app/components/error/errorPage.html'

@@ -2,13 +2,19 @@
     'use strict';
 
     var app = angular.module('campture');
-    app.filter('escape', function() {
+    app.filter('escape', function () {
         return window.encodeURIComponent;
     });
     app.controller('TimelineCtrl', ['$scope', '$cookies', '$rootScope', '$routeParams', '$location', 'uiGmapIsReady', 'AccountService', 'TripService', '$timeout', controller]);
     function controller($scope, $cookies, $rootScope, $routeParams, $location, uiGmapIsReady, accountService, tripService, $timeout) {
         //====== Scope Variables==========
         //================================
+        //linkify
+        $scope.linkifyText = function () {
+            $('.description').linkify();
+            $('.linkify').linkify();
+        }
+
         $routeParams.tripId;
         $scope.currentUserObj = Parse.User.current();
         $scope.userObj;
@@ -19,6 +25,7 @@
         $scope.likeId;
         $scope.isLikeDisabled = false;
         $scope.myInterval = 2000;
+        $scope.modalCaption = "";
         $scope.timelineImages = new Array();
         var bounds = new google.maps.LatLngBounds();
         if ($scope.currentUserObj) {
@@ -47,15 +54,21 @@
                                 }
 
                             });
+                            $scope.linkifyText();
                         });
                     }
                 });
                 var markerId = 0;
                 angular.forEach($scope.trip.visited_places, function (place, key) {
-                    $scope.allMarkers.push({ latitude: place.coordinates.latitude, longitude: place.coordinates.longitude, title: place.location, id: markerId })
-                    var latlng = new google.maps.LatLng(place.coordinates.latitude, place.coordinates.longitude);
-                    bounds.extend(latlng);
-                    markerId++;
+                    try {
+                        $scope.allMarkers.push({ latitude: place.coordinates.latitude, longitude: place.coordinates.longitude, title: place.location, id: markerId })
+                        var latlng = new google.maps.LatLng(place.coordinates.latitude, place.coordinates.longitude);
+                        bounds.extend(latlng);
+                        markerId++;
+                    }
+                    catch (e) {
+                        console.log(e);
+                    }
                 });
                 $scope.map = { center: { latitude: $scope.allMarkers[0].latitude, longitude: $scope.allMarkers[0].longitude }, zoom: 15 };
                 $scope.polylines = [
@@ -174,22 +187,30 @@
             });
         };
         $scope.tripLikeUnlike = function () {
-            if ($scope.likeId) {
-                $scope.likeId = undefined;
-                $scope.unlikeTrip();
+            if ($scope.currentUserObj) {
+                if ($scope.likeId) {
+                    $scope.likeId = undefined;
+                    $scope.unlikeTrip();
+                }
+                else {
+                    $scope.likeId = new Object();
+                    $scope.likeTrip();
+                }
             }
             else {
-                $scope.likeId = new Object();
-                $scope.likeTrip();
+                //$("#facebook-login-modal2").css("display", "block");
+                $scope.isLikeDisabled = false;
             }
         }
 
         //----Modal-----//
         $scope.modalShown = false;
-        $scope.toggleModal = function (imageUrl) {
+        $scope.toggleModal = function (imageUrl, caption) {
+            $('#modalImg').attr('src', '');
             $scope.modalImageUrl = undefined;
             $scope.modalShown = !$scope.modalShown;
             $scope.modalImageUrl = imageUrl;
+            $scope.modalCaption = caption;
         };
 
         $scope.searchFilteredFeed = function (searchText) {
@@ -201,16 +222,15 @@
                 scrollTop: $("#comments").offset().top - 100
             }, 500);
         }
-        $scope.shareOnFacebook = function(){
+        $scope.shareOnFacebook = function () {
             FB.ui({
-            method: "feed",
-            link: $scope.pageUrl,
-            caption: $scope.trip.title,
-            description: $scope.trip.introduction,
-            picture: $scope.trip.main_image.image_url
-        });
+                method: "feed",
+                link: $scope.pageUrl,
+                caption: $scope.trip.title,
+                description: $scope.trip.introduction,
+                picture: $scope.trip.main_image.image_url
+            });
         }
-
 
     };
 })();

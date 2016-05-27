@@ -2,15 +2,20 @@ var app = angular.module('campture');
 app.factory('AccountService', ['$http', '$q', function ($http, $q) {
     var User = Parse.Object.extend("User");
     var Trips = Parse.Object.extend("Trips");
+    var TripLikes = Parse.Object.extend("Trip_Likes");
 
     var user = new User();
     var trips = new Trips();
+    var tripLikes = new TripLikes();
+
     return {
         getTripById: getTripById,
         postTrip: postTrip,
         updateTrip: updateTrip,
+        deleteTrip: deleteTrip,
         getMyTrips: getMyTrips,
         getAllTrips: getAllTrips,
+        getAllFeaturedTrips: getAllFeaturedTrips,
         getMyProfile: getMyProfile,
         updateUserFacebookProfile: updateUserFacebookProfile,
         getUserById: getUserById,
@@ -36,6 +41,7 @@ app.factory('AccountService', ['$http', '$q', function ($http, $q) {
     };
 
     function postTrip(tripDetails, callback) {
+        var trips = new Trips();
         trips.set("title", tripDetails.title);
         trips.set("introduction", tripDetails.introduction);
         trips.set("main_image", tripDetails.main_image);
@@ -50,6 +56,11 @@ app.factory('AccountService', ['$http', '$q', function ($http, $q) {
             objectId: tripDetails.user.id
         });
 
+        //var customACL = new Parse.ACL();
+        //customACL.setWriteAccess(Parse.User.current(), true);
+        //customACL.setPublicReadAccess(true);
+        //trips.setACL(customACL);
+
 
         trips.save(null, {
             success: function (parseObject) {
@@ -62,6 +73,7 @@ app.factory('AccountService', ['$http', '$q', function ($http, $q) {
     };
 
     function updateTrip(tripDetails, callback) {
+        var trips = new Trips();
         trips.id = tripDetails.id;
         trips.set("title", tripDetails.title);
         trips.set("introduction", tripDetails.introduction);
@@ -79,11 +91,24 @@ app.factory('AccountService', ['$http', '$q', function ($http, $q) {
                 callback(parseObject.id);
             },
             error: function (gameScore, error) {
-                alert('Failed to create new object, with error code: ' + error.message);
+                console.log('Failed to create new object, with error code: ' + error.message);
             }
         });
 
     };
+    function deleteTrip(tripId, callback) {
+        var trips = new Trips();
+        trips.id = tripId;
+        trips.destroy({
+            success: function (parseObject) {
+                callback(parseObject.id);
+            },
+            error: function (myObject, error) {
+                console.log('Failed to create new object, with error code: ' + error.message);
+            }
+        });
+    }
+
     function getMyTrips(myId, callback) {
         var myTrips = new Array();
         var query = new Parse.Query(trips);
@@ -110,6 +135,24 @@ app.factory('AccountService', ['$http', '$q', function ($http, $q) {
         var query = new Parse.Query(trips);
         query.include("user_pointer");
 
+        query.find({
+            success: function (parseObject) {
+                for (var i = 0; i < parseObject.length; i++) {
+                    allTrips[i] = getTripFromParse(parseObject[i]);
+                }
+                callback(allTrips);
+            },
+            error: function (object, error) {
+                // The object was not retrieved successfully.
+            }
+        });
+    };
+
+    function getAllFeaturedTrips(callback) {
+        var allTrips = new Array();
+        var query = new Parse.Query(trips);
+        query.include("user_pointer");
+        query.equalTo("is_featured", true);
         query.find({
             success: function (parseObject) {
                 for (var i = 0; i < parseObject.length; i++) {
@@ -163,7 +206,7 @@ app.factory('AccountService', ['$http', '$q', function ($http, $q) {
             },
             error: function (object, error) {
                 // The object was not retrieved successfully.
-                if(error.code == 101){
+                if (error.code == 101) {
                     callback(undefined);
                 }
             }

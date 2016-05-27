@@ -2,8 +2,8 @@
     'use strict';
 
     var app = angular.module('campture');
-    app.controller('EditTripCtrl', ['$scope', '$cookies', '$rootScope', 'AccountService', '$routeParams', '$location', controller]);
-    function controller($scope, $cookies, $rootScope, accountService, $routeParams, $location) {
+    app.controller('EditTripCtrl', ['$scope', '$cookies', '$rootScope', 'AccountService', '$routeParams', '$location', '$sessionStorage', controller]);
+    function controller($scope, $cookies, $rootScope, accountService, $routeParams, $location, $sessionStorage) {
         //====== Scope Variables==========
         //================================
         $routeParams.tripId;
@@ -31,6 +31,7 @@
             for (var i = 0; i < $scope.places.length; i++) {
                 $scope.newplaces.push(i);
             }
+            getFormSession(data);            
             $scope.$apply();
         });
 
@@ -62,7 +63,7 @@
         $scope.dropzoneConfig = {
             'options': { // passed into the Dropzone constructor
                 'acceptedFiles': '.jpg,.png,.jpeg,.gif',
-                'url': 'https://api.cloudinary.com/v1_1/dzseog4g3/image/upload',
+                'url': 'https://api.cloudinary.com/v1_1/dsykpguat/image/upload',//dzseog4g3
                 'uploadMultiple': false,
                 'parallelUploads': 10,
                 'addRemoveLinks': true,
@@ -72,9 +73,9 @@
             },
             'eventHandlers': {
                 'sending': function (file, xhr, formData) {
-                    formData.append('api_key', '374998139757779');
+                    formData.append('api_key', '383751488485679');//374998139757779
                     formData.append('timestamp', Date.now() / 1000 | 0);
-                    formData.append('upload_preset', 'campture');
+                    formData.append('upload_preset', 'campture2');
                     file.placeIndex = $scope.currentPlaceIndex;
                     file.imageIndex = $scope.currentImageIndex;
                     $scope.currentImageIndex++;
@@ -82,6 +83,7 @@
                 },
                 'success': function (file, response) {
                     $scope.places[file.placeIndex].images.push({ image_url: response.url });
+                    $scope.saveFormSession();
                     //$scope.initPlaces[file.placeIndex].images.pop();
                 },
                 'removedfile': function (file, response) {
@@ -105,7 +107,7 @@
         $scope.mainImageDropzoneConfig = {
             'options': { // passed into the Dropzone constructor
                 'acceptedFiles': '.jpg,.png,.jpeg,.gif',
-                'url': 'https://api.cloudinary.com/v1_1/dzseog4g3/image/upload',
+                'url': 'https://api.cloudinary.com/v1_1/dsykpguat/image/upload',//dzseog4g3
                 'uploadMultiple': false,
                 'parallelUploads': 1,
                 'maxFiles': 1
@@ -113,14 +115,15 @@
             'eventHandlers': {
                 'sending': function (file, xhr, formData) {
                     $scope.mainImageUploading = true;
-                    formData.append('api_key', '374998139757779');
+                    formData.append('api_key', '383751488485679');//374998139757779
                     formData.append('timestamp', Date.now() / 1000 | 0);
-                    formData.append('upload_preset', 'campture');
+                    formData.append('upload_preset', 'campture2');
                 },
                 'success': function (file, response) {
                     $scope.newTrip.main_image = { image_url: response.url };
                     $scope.mainImageUploading = false;
                     $scope.mainImageUploaded = true;
+                    $scope.saveFormSession();
                 }
             }
         };
@@ -129,10 +132,10 @@
             $scope.currentImageIndex = 0;
         };
         $scope.setUploadPlaceIndexForHover = function (pIndex) {
-            if($scope.currentPlaceIndex != pIndex){
+            if ($scope.currentPlaceIndex != pIndex) {
                 $scope.currentImageIndex = 0;
             }
-            $scope.currentPlaceIndex = pIndex;            
+            $scope.currentPlaceIndex = pIndex;
         };
         $scope.closeAlert = function (index) {
             $scope.alerts.splice(index, 1);
@@ -157,6 +160,7 @@
                                 $scope.newplaces = [1];
                                 $scope.newTrip = undefined;
                                 $scope.isPostSuccessful = true;
+                                $scope.deleteFormSession();
                                 $location.path('/account/timeline/' + $routeParams.tripId);
                             }
                         });
@@ -191,6 +195,19 @@
         $scope.isEmptyArray = function (objectArray) {
             if (objectArray) { }
         }
+
+        //session
+
+        $scope.saveFormSession = function () {
+            $sessionStorage.newTripSession = $scope.newTrip;
+            $sessionStorage.placesSession = $scope.places;
+        }
+        $scope.deleteFormSession = function () {
+            $sessionStorage.newTripSession = undefined;
+            $sessionStorage.placesSession = undefined;
+        }
+
+
         function validateImageCount(trip) {
             for (var index = 0; index < trip.visited_places.length; index++) {
                 if (trip.visited_places[index].images.length < 1) {
@@ -210,6 +227,47 @@
             }
             $scope.allCoordinatesUploaded = true;
             return true;
+        }
+        function getFormSession(data){
+            if ($sessionStorage.newTripSession && $sessionStorage.newTripSession.id == data.id) {
+                $scope.newTrip = $sessionStorage.newTripSession;
+                if ($scope.newTrip.posted_on) {
+                    $scope.newTrip.posted_on = new Date($scope.newTrip.posted_on);
+                }
+                if ($scope.newTrip.createdAt) {
+                    $scope.newTrip.createdAt = new Date($scope.newTrip.createdAt);
+                }
+                if ($scope.newTrip.updatedAt) {
+                    $scope.newTrip.updatedAt = new Date($scope.newTrip.updatedAt);
+                }
+                if ($scope.newTrip.visited_places) {
+                    for (var i = 0; i < $scope.newTrip.visited_places.length; i++) {
+                        if ($scope.newTrip.visited_places[i].date) {
+                            $scope.newTrip.visited_places[i].date = new Date($scope.newTrip.visited_places[i].date);
+                        }
+                    }
+                }
+                if ($scope.newTrip.main_image && $scope.newTrip.main_image.image_url) {
+                    $scope.mainImageUploaded = true;
+                }
+            }
+            if ($sessionStorage.placesSession && $sessionStorage.newTripSession.id == data.id) {
+                if ($sessionStorage.placesSession.length > 1) {
+                    $scope.openStatus = false;
+                }
+                $scope.places = $sessionStorage.placesSession;
+                if ($scope.places) {
+                    for (var i = 0; i < $scope.places.length; i++) {
+                        if ($scope.places[i].date) {
+                            $scope.places[i].date = new Date($scope.places[i].date);
+                        }
+                    }
+                }
+                $scope.newplaces = new Array();
+                for (var i = 0; i < $scope.places.length; i++) {
+                    $scope.newplaces.push(i);
+                }
+            }
         }
     };
 })();
