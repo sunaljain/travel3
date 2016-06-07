@@ -13,12 +13,14 @@ app.factory('LocationService', ['$http', '$q', function ($http, $q) {
         getReviewsForLocation: getReviewsForLocation,
         getReviewsOfUser: getReviewsOfUser,
         postReview: postReview,
+        postTip: postTip,
         updateReview: updateReview,
         VoteReview: VoteReview,
         getTipsForLocation: getTipsForLocation,
         saveLocationCard: saveLocationCard,
         getLocationCards: getLocationCards,
         getUserLocationCardList: getUserLocationCardList,
+        getLocationCardByPlaceId: getLocationCardByPlaceId,
         addUserLocationCard: addUserLocationCard,
         searchLocationCardByText: searchLocationCardByText,
         searchLocationByTag: searchLocationByTag 
@@ -76,6 +78,27 @@ app.factory('LocationService', ['$http', '$q', function ($http, $q) {
             objectId: reviewObject.userId
         });
         locationReview.save(null, {
+            success: function (parseObject) {
+                callback(parseObject.id);
+            },
+            error: function (gameScore, error) {
+                console.log('Failed to create new object, with error code: ' + error.message);
+            }
+        });
+    }
+
+        function postTip(tipObject, callback) {
+        var locationTips = new LocationTips();
+        locationTips.set("place_id", tipObject.placeId);
+        locationTips.set("tip_text", tipObject.tipText);
+        locationTips.set("upvote_count", 0);
+        locationTips.set("downvote_count", 0);
+        locationTips.set("user_pointer", {
+            __type: "Pointer",
+            className: "_User",
+            objectId: tipObject.userId
+        });
+        locationTips.save(null, {
             success: function (parseObject) {
                 callback(parseObject.id);
             },
@@ -178,6 +201,7 @@ app.factory('LocationService', ['$http', '$q', function ($http, $q) {
             }
         });
     }
+
     function getUserLocationCardList(userId, callback) {
         var userLocationCardList = new Array();
         var locationCardObject = new Object();
@@ -219,6 +243,19 @@ app.factory('LocationService', ['$http', '$q', function ($http, $q) {
             },
             error: function (object, error) {
                 console.log(object)
+            }
+        });
+    }
+    function getLocationCardByPlaceId(placeId, callback) {
+       var locationCard = new LocationCard();
+        var query = new Parse.Query(locationCard);
+        query.equalTo("place_id", placeId);
+        query.first({
+            success: function (parseObject) {
+                callback(JSON.parse(JSON.stringify(parseObject)));
+            },
+            error: function (object, error) {
+                // The object was not retrieved successfully.
             }
         });
     }
@@ -277,24 +314,21 @@ app.factory('LocationService', ['$http', '$q', function ($http, $q) {
 
     }
     function searchLocationCardByText(searchText, page, callback) {
+        try{
+        var keywords = searchText.trim().replace( /\s\s+/g, ' ' ).toLowerCase().split(" ")
+        }
+        catch(ex){
+            console.log(ex)
+        }
         var locationCard = new LocationCard();
-        var searchLocationName = new Parse.Query(locationCard);
-        searchLocationName.startsWith("name", searchText);
-        var searchLocationTags = new Parse.Query(locationCard);
-        searchLocationTags.equalTo("tags", searchText);
-
-        var mainQuery = Parse.Query.or(searchLocationName, searchLocationTags);
-        mainQuery.limit(paginglimit);
-        mainQuery.skip(page * paginglimit);
-        mainQuery.find({
-            success: function(parseObject) {
-            if(parseObject){
-                callback(JSON.parse(JSON.stringify(parseObject)))
-            }
-            },
-            error: function(error) {
-            // There was an error.
-            } 
+        var query = new Parse.Query(locationCard);
+        query.limit(paginglimit);
+        query.skip(page * paginglimit);
+        query.containsAll("keywords", keywords);
+        query.find().then(function(parseObject) {
+            callback(parseObject)
+        }, function(error) {
+            console.log(parseObject)
         });
     }
     function searchLocationByTag(tags, page, callback){

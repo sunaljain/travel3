@@ -12,11 +12,12 @@
             }
         };
     });
-    app.controller('InspirationCtrl', ['$scope', 'LocationService', controller]);
-    function controller($scope, locationService) {
+    app.controller('InspirationCtrl', ['$scope', '$routeParams', 'LocationService', controller]);
+    function controller($scope, $routeParams, locationService) {
         $scope.locationCards;
         $scope.searchText;
         var page = 0;
+
         function getLocationCards(page) {
             locationService.getLocationCards(page, function (data) {
                 $scope.locationCards = data;
@@ -24,14 +25,25 @@
                 setTimeout(masonaryCall, 2000)
             });
         }
-        getLocationCards(page);
+        if ($routeParams.tag) {
+            $scope.searchLocationByTags($routeParams.tag)
+        }
+        else {
+            getLocationCards(page);
+        }
         function masonaryCall() {
             $(document).ready(function () {
                 $('.dynamic').masonry();
             })
         }
         $scope.searchLocationCard = function () {
-
+            locationService.searchLocationCardByText($scope.searchText,page,function(data){
+                if(data){
+                    $scope.locationCards = data;
+                    $scope.$apply();
+                    setTimeout(masonaryCall, 2000)
+                }
+            })
         }
         $scope.searchLocationByTags = function (tags) {
             locationService.searchLocationByTag([tags], page, function (data) {
