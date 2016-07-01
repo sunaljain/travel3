@@ -1,8 +1,9 @@
 <script src="js/inspiration/jquery-ui-i18n.min.js"></script>
-    <script src="js/inspiration/masonry.pkgd.min.js"></script>
+<script src="js/inspiration/masonry.pkgd.min.js"></script>
 <script src="https://npmcdn.com/imagesloaded@4.1/imagesloaded.pkgd.min.js"></script>
 <div class="container">
     Search: <input type="text" ng-model="searchText"> <button ng-click="searchLocationCard()">Search</button>
+        <button ng-click="open()">Open Modal</button>
   <div class="dynamic" style="position: relative; height: 2979px;">
       <div class="panel col-md-3 col-sm-6 col-xs-6"  style="position: absolute; left: 0px; top: 0px; padding-left:10px; padding-right:10px;" ng-repeat="locationCard in locationCards track by $index">
       <div class="insp-panel">
@@ -19,8 +20,23 @@
       </div>
      
    </div> 
-      
+     
+
 </div>
-       <script>
-           
-  </script>
+<script type="text/ng-template" id="locationContentModal.html">
+        <div class="modal-header">
+            <h3 class="modal-title">I'm a modal!</h3>
+        </div>
+        <div class="modal-body" style="min-width: 1000px">
+            <ul>
+                <li ng-repeat="item in items">
+                    <a href="#" ng-click="$event.preventDefault(); selected.item = item">{{ item }}</a>
+                </li>
+            </ul>
+            Selected: <b>{{ selected.item }}</b>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
+            <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
+        </div>
+    </script>
