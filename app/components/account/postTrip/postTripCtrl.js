@@ -2,6 +2,51 @@
     'use strict';
 
     var app = angular.module('campture');
+    app.directive("modalShow", function () {
+        return {
+            restrict: "A",
+            scope: {
+                modalVisible: "="
+            },
+            link: function (scope, element, attrs) {
+
+                //Hide or show the modal
+                scope.showModal = function (visible) {
+                    if (visible) {
+                        element.modal("show");
+                    }
+                    else {
+                        element.modal("hide");
+                    }
+                }
+
+                //Check to see if the modal-visible attribute exists
+                if (!attrs.modalVisible) {
+
+                    //The attribute isn't defined, show the modal by default
+                    scope.showModal(true);
+
+                }
+                else {
+
+                    //Watch for changes to the modal-visible attribute
+                    scope.$watch("modalVisible", function (newValue, oldValue) {
+                        scope.showModal(newValue);
+                    });
+
+                    //Update the visible value when the dialog is closed through UI actions (Ok, cancel, etc.)
+                    element.bind("hide.bs.modal", function () {
+                        scope.modalVisible = false;
+                        if (!scope.$$phase && !scope.$root.$$phase)
+                            scope.$apply();
+                    });
+
+                }
+
+            }
+        };
+
+    });
     app.controller('PostTripCtrl', ['$scope', '$route', '$cookies', '$rootScope', '$location', '$sessionStorage', '$interval', 'AccountService', controller]);
     function controller($scope, $route, $cookies, $rootScope, $location, $sessionStorage, $interval, accountService) {
         //====== Scope Variables==========
@@ -16,8 +61,8 @@
         }
         $scope.userObj.id = $scope.userObj.objectId;
         $scope.details = function (details) {
-            $scope.places[$scope.pIndex].coordinates = { latitude: details.geometry.location.lat(), longitude: details.geometry.location.lng() };
-            $scope.places[$scope.pIndex].locationDetails = details
+            $scope.places[$scope.placeCount - 1].coordinates = { latitude: details.geometry.location.lat(), longitude: details.geometry.location.lng() };
+            $scope.places[$scope.placeCount - 1].locationDetails = details
         };
         $scope.getPlaceIndex = function (pindex) {
             $scope.pIndex = pindex;
@@ -29,7 +74,7 @@
         $scope.places = new Array();
         //$scope.place = new Object();
         $scope.newplaces = [0];
-        $scope.places[$scope.newplaces.length - 1] = { images: new Array() };
+
         $scope.queuecomplete = 0;
         $scope.imageUploadDone = false;
         $scope.isPublishedClicked = false;
@@ -40,10 +85,14 @@
         $scope.currentPlaceIndex = 0;
         $scope.currentImageIndex = 0;
         $scope.openStatus = true;
+        $scope.placeCount = 0;
         //Date functions
         $scope.status = {
             opened: false
         };
+
+        $scope.postStep = 1;
+        $scope.myTrip = new Object();
 
         //form session save
         $scope.form = {
@@ -87,8 +136,8 @@
 
         };
         $scope.addPlace = function () {
-            $scope.newplaces.push($scope.newplaces.length);
-            $scope.places[$scope.newplaces.length - 1] = { images: new Array() };
+            $scope.placeCount++;
+            $scope.places[$scope.placeCount] = { images: new Array() };
         };
         $scope.removePlace = function () {
             $scope.newplaces.pop();
@@ -139,7 +188,7 @@
                     formData.append('api_key', '383751488485679'); //374998139757779
                     formData.append('timestamp', Date.now() / 1000 | 0);
                     formData.append('upload_preset', 'campture2');
-                    file.placeIndex = $scope.currentPlaceIndex;
+                    file.placeIndex = $scope.placeCount - 1 //$scope.currentPlaceIndex;
                     file.imageIndex = $scope.currentImageIndex;
                     if (file.imageIndex == 0) {
                         getImageGeotagLocation(file, function (data) {
@@ -160,13 +209,16 @@
                     $scope.currentImageIndex++;
                 },
                 'error': function (file, response) {
-                    $scope.places[file.placeIndex].images.push({ image_url: response.url });
-                    $scope.saveFormSession();
-                    $scope.$apply();
+                    //$scope.places[file.placeIndex].images.push({ image_url: response.url });
+                    //$scope.saveFormSession();
+                    //$scope.$apply();
                 },
                 'success': function (file, response) {
+                    if (!$scope.places[file.placeIndex].images) {
+                        $scope.places[file.placeIndex].images = new Array();
+                    }
                     $scope.places[file.placeIndex].images.push({ image_url: response.url });
-                    $scope.saveFormSession();
+                    //$scope.saveFormSession();
                     $scope.$apply();
                 },
                 'removedfile': function (file, response) {
@@ -206,9 +258,10 @@
                 },
                 'success': function (file, response) {
                     $scope.newTrip.main_image = { image_url: response.url };
+                    $scope.myTrip.main_image = { image_url: response.url };
                     $scope.mainImageUploading = false;
                     $scope.mainImageUploaded = true;
-                    $scope.saveFormSession();
+                    //$scope.saveFormSession();
                     $scope.$apply();
                 }
             }
@@ -271,9 +324,40 @@
             if ($scope.newTrip.main_image) {
                 $scope.newTrip.main_image = undefined;
             }
-            $scope.saveFormSession();
+            //$scope.saveFormSession();
             $route.reload();
         }
+        $scope.saveTripCover = function () {
+            $scope.newTrip.user = {
+                id: $scope.userObj.objectId,
+                name: $scope.userObj.facebook_profile.name
+            }
+            accountService.postTrip($scope.newTrip, function (data) {
+                $scope.$apply(function () {
+                    if (data) {
+                        $scope.newTrip = data
+                        $scope.postStep = 2
+                        $('#addcoverModal').modal('toggle')
+                    }
+                });
+            });
+        }
+        $scope.saveVisitedPlace = function () {
+            //step 3 click of + button
+            $scope.newTrip.visited_places = $scope.places
+            accountService.updateTrip($scope.newTrip, function (data) {
+                $scope.$apply(function () {
+                    if (data) {
+                        $scope.newTrip = data
+                        $scope.postStep = 4
+                        $scope.placeCount++
+                        $('#addcardModal').modal('hide')
+                    }
+                });
+            });
+        }
+
+
         //GeoTagging
         function getGPSDegreeToDecimal(degree, minutes, seconds, direction) {
             direction.toUpperCase();
